@@ -29,6 +29,7 @@ from ai_architect_demo.data.document_processor import DocumentProcessor, documen
 from ai_architect_demo.data.validation import data_validator, create_document_validation_rules
 from ai_architect_demo.ml.mlops import MLOpsManager, mlops_manager
 from ai_architect_demo.ml.evaluation import model_evaluator
+from ai_architect_demo.api.routes import documents_router, models_router
 
 logger = get_logger(__name__)
 
