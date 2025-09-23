@@ -124,6 +124,10 @@ app.add_middleware(
     allowed_hosts=["localhost", "127.0.0.1", "*"]
 )
 
+# Include routers
+app.include_router(documents_router)
+app.include_router(models_router)
+
 # Global variables for services
 db: Optional[Database] = None
 doc_processor: DocumentProcessor = document_processor
