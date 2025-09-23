@@ -316,16 +316,18 @@ class AgentDemonstrator:
                     "agent_id": agent.agent_id,
                     "name": agent.name,
                     "description": agent.description,
-                    "capabilities": list(agent.capabilities.keys()),
-                    "task_count": agent.task_count,
-                    "success_rate": agent.success_rate
+                    "capabilities": agent.capabilities.supported_tasks,
+                    "max_concurrent_tasks": agent.capabilities.max_concurrent_tasks,
+                    "specializations": agent.capabilities.specializations,
+                    "total_tasks_completed": agent.total_tasks_completed,
+                    "success_rate": (agent.total_tasks_completed - agent.error_count) / max(agent.total_tasks_completed, 1)
                 }
                 for agent_name, agent in self.agents.items()
             },
             "orchestrator_metrics": {
-                "total_tasks_processed": self.orchestrator.total_tasks,
+                "total_tasks_processed": len(self.demo_results),
                 "active_agents": len(self.orchestrator.agents),
-                "queue_status": self.orchestrator.task_queue.size()
+                "queue_size": self.orchestrator.task_queue.size()
             },
             "demonstration_results": self.demo_results,
             "technical_highlights": [
