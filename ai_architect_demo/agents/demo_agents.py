@@ -73,6 +73,9 @@ class AgentDemonstrator:
         await self.orchestrator.register_agent(bi_agent) 
         await self.orchestrator.register_agent(qa_agent)
         
+        # Start task processing
+        await self.orchestrator.start_processing()
+        
         self.agents = {
             "document_analyzer": doc_agent,
             "business_intelligence": bi_agent,

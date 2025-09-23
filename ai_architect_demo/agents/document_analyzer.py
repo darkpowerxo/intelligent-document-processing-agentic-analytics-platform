@@ -152,7 +152,7 @@ class DocumentAnalyzerAgent(BaseAgent):
         summary_result = await self._perform_llm_analysis(
             content, 
             "summary",
-            {"max_length": 200, "style": "professional"}
+            {"max_length": 200, "style": "professional", "focus_areas": []}
         )
         results["summary"] = summary_result
         

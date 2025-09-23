@@ -325,7 +325,7 @@ class MultiAgentDemo:
             
             logger.info(f"  {agent_name} ({agent_role}): {current_tasks} active, {completed_tasks} completed, {success_rate:.1%} success rate")
     
-    async def _wait_for_task_completion(self, task_id: str, timeout: int = 30) -> Dict[str, Any]:
+    async def _wait_for_task_completion(self, task_id: str, timeout: int = 60) -> Dict[str, Any]:
         """Wait for a task to complete and return its result.
         
         Args:
@@ -402,6 +402,11 @@ async def main():
         raise
     finally:
         await demo.cleanup()
+
+
+async def run_demo():
+    """Wrapper function for running the demo programmatically."""
+    await main()
 
 
 if __name__ == "__main__":

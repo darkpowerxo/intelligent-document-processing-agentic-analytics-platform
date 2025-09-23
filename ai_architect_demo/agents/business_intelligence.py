@@ -926,3 +926,150 @@ Respond in JSON format:
     
     def _get_marketing_analysis_template(self) -> str:
         return "Marketing analysis covering campaigns, channels, and ROI metrics"
+    
+    async def _calculate_revenue_kpis(self, df) -> Dict[str, Any]:
+        """Calculate revenue-related KPIs from dataframe."""
+        try:
+            kpis = {}
+            
+            # Basic revenue metrics
+            if 'revenue' in df.columns:
+                kpis['total_revenue'] = float(df['revenue'].sum())
+                kpis['avg_revenue'] = float(df['revenue'].mean())
+                kpis['median_revenue'] = float(df['revenue'].median())
+                kpis['revenue_std'] = float(df['revenue'].std())
+                
+                # Growth rate (if date column available)
+                if 'date' in df.columns or 'month' in df.columns:
+                    kpis['revenue_trend'] = self._calculate_trend(df['revenue'])
+            
+            # Profit margins (if cost data available)
+            if 'cost' in df.columns and 'revenue' in df.columns:
+                profit = df['revenue'] - df['cost']
+                kpis['total_profit'] = float(profit.sum())
+                kpis['avg_profit_margin'] = float((profit / df['revenue']).mean() * 100)
+            
+            return kpis
+            
+        except Exception as e:
+            return {"error": f"Revenue KPI calculation failed: {str(e)}"}
+    
+    async def _calculate_customer_kpis(self, df) -> Dict[str, Any]:
+        """Calculate customer-related KPIs from dataframe."""
+        try:
+            kpis = {}
+            
+            # Customer counts
+            if 'customer_id' in df.columns:
+                kpis['total_customers'] = df['customer_id'].nunique()
+                kpis['avg_transactions_per_customer'] = float(len(df) / df['customer_id'].nunique())
+            
+            # Customer lifetime value
+            if 'customer_id' in df.columns and 'revenue' in df.columns:
+                clv = df.groupby('customer_id')['revenue'].sum()
+                kpis['avg_customer_lifetime_value'] = float(clv.mean())
+                kpis['median_customer_lifetime_value'] = float(clv.median())
+            
+            # Acquisition metrics (if acquisition_date available)
+            if 'acquisition_date' in df.columns:
+                kpis['new_customers_period'] = len(df['acquisition_date'].dropna())
+            
+            return kpis
+            
+        except Exception as e:
+            return {"error": f"Customer KPI calculation failed: {str(e)}"}
+    
+    async def _calculate_operational_kpis(self, df) -> Dict[str, Any]:
+        """Calculate operational KPIs from dataframe."""
+        try:
+            kpis = {}
+            
+            # Processing metrics
+            if 'processing_time' in df.columns:
+                kpis['avg_processing_time'] = float(df['processing_time'].mean())
+                kpis['median_processing_time'] = float(df['processing_time'].median())
+            
+            # Volume metrics
+            kpis['total_transactions'] = len(df)
+            
+            # Quality metrics
+            if 'status' in df.columns:
+                success_rate = (df['status'] == 'success').sum() / len(df)
+                kpis['success_rate'] = float(success_rate * 100)
+            
+            # Efficiency metrics
+            if 'resources_used' in df.columns:
+                kpis['avg_resource_utilization'] = float(df['resources_used'].mean())
+            
+            return kpis
+            
+        except Exception as e:
+            return {"error": f"Operational KPI calculation failed: {str(e)}"}
+    
+    async def _calculate_general_kpis(self, df) -> Dict[str, Any]:
+        """Calculate general KPIs from dataframe."""
+        try:
+            kpis = {}
+            
+            # Basic statistics
+            kpis['total_records'] = len(df)
+            kpis['data_completeness'] = float((df.notna().sum().sum() / (len(df) * len(df.columns))) * 100)
+            
+            # Numeric column statistics
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            for col in numeric_cols:
+                kpis[f'{col}_mean'] = float(df[col].mean())
+                kpis[f'{col}_sum'] = float(df[col].sum())
+            
+            # Date range (if date columns exist)
+            date_cols = df.select_dtypes(include=['datetime64']).columns
+            if len(date_cols) > 0:
+                for col in date_cols:
+                    kpis[f'{col}_range_days'] = (df[col].max() - df[col].min()).days
+            
+            return kpis
+            
+        except Exception as e:
+            return {"error": f"General KPI calculation failed: {str(e)}"}
+    
+    def _summarize_kpis(self, kpis: Dict[str, Any]) -> str:
+        """Summarize KPIs into a human-readable format."""
+        try:
+            if not kpis or "error" in kpis:
+                return f"KPI Summary: {kpis.get('error', 'No data available')}"
+            
+            summary_parts = []
+            
+            # Revenue metrics
+            if 'total_revenue' in kpis:
+                summary_parts.append(f"Total Revenue: ${kpis['total_revenue']:,.2f}")
+            if 'avg_revenue' in kpis:
+                summary_parts.append(f"Average Revenue: ${kpis['avg_revenue']:,.2f}")
+            if 'revenue_trend' in kpis:
+                summary_parts.append(f"Revenue Trend: {kpis['revenue_trend']}")
+            
+            # Customer metrics
+            if 'total_customers' in kpis:
+                summary_parts.append(f"Total Customers: {kpis['total_customers']:,}")
+            if 'avg_customer_lifetime_value' in kpis:
+                summary_parts.append(f"Avg Customer LTV: ${kpis['avg_customer_lifetime_value']:,.2f}")
+            
+            # Operational metrics
+            if 'success_rate' in kpis:
+                summary_parts.append(f"Success Rate: {kpis['success_rate']:.1f}%")
+            if 'total_transactions' in kpis:
+                summary_parts.append(f"Total Transactions: {kpis['total_transactions']:,}")
+            
+            # General metrics
+            if 'total_records' in kpis:
+                summary_parts.append(f"Total Records: {kpis['total_records']:,}")
+            if 'data_completeness' in kpis:
+                summary_parts.append(f"Data Completeness: {kpis['data_completeness']:.1f}%")
+            
+            if not summary_parts:
+                return f"KPI Summary: {len(kpis)} metrics calculated successfully"
+            
+            return "KPI Summary: " + " | ".join(summary_parts[:5])  # Limit to first 5 metrics
+            
+        except Exception as e:
+            return f"KPI Summary: Error formatting results - {str(e)}"

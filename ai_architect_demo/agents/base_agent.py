@@ -117,6 +117,9 @@ class BaseAgent(ABC):
         self.ollama_endpoint = ollama_endpoint
         self.model_name = model_name
         
+        # Initialize logger for this agent
+        self.logger = get_logger(f"{__name__}.{self.__class__.__name__}")
+        
         # Agent state
         self.status = AgentStatus.IDLE
         self.current_tasks: Dict[str, AgentTask] = {}
