@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 from ai_architect_demo.core.config import settings
-from ai_architect_demo.agents.base_agent import BaseAgent, AgentTask
+from ai_architect_demo.agents.base_agent import BaseAgent, AgentTask, TaskPriority
 from ai_architect_demo.agents.orchestrator import AgentOrchestrator
 from ai_architect_demo.agents.document_analyzer import DocumentAnalyzerAgent
 from ai_architect_demo.agents.business_intelligence import BusinessIntelligenceAgent
@@ -89,6 +89,7 @@ class AgentDemonstrator:
         task = AgentTask(
             task_id="demo_doc_001",
             task_type="document_analysis",
+            priority=TaskPriority.HIGH,
             data={
                 "document_content": """
                 AI Architecture Proposal for Enterprise System
@@ -120,14 +121,24 @@ class AgentDemonstrator:
                 "analysis_type": "comprehensive",
                 "extract_entities": True,
                 "generate_summary": True,
-                "identify_topics": True
-            },
-            priority="high",
-            metadata={"demo": True, "category": "document_processing"}
+                "identify_topics": True,
+                "demo": True,
+                "category": "document_processing"
+            }
         )
         
         # Execute task through orchestrator
-        result = await self.orchestrator.delegate_task(task)
+        task_id = await self.orchestrator.submit_task(
+            task_type=task.task_type,
+            data=task.data,
+            priority=task.priority,
+            requester_id="demo_system"
+        )
+        
+        # For demo purposes, wait a bit and get task status
+        await asyncio.sleep(2)
+        result = await self.orchestrator.get_task_status(task_id)
+        self.demo_results["document_analysis"] = {"task_id": task_id, "status": result}
         self.demo_results["document_analysis"] = result
         
         logger.info("✅ Document analysis demonstration completed")
@@ -153,19 +164,29 @@ class AgentDemonstrator:
         task = AgentTask(
             task_id="demo_bi_001",
             task_type="business_analysis",
+            priority=TaskPriority.HIGH,
             data={
                 "business_data": business_data,
                 "analysis_type": "comprehensive",
                 "generate_insights": True,
                 "create_forecasts": True,
-                "identify_trends": True
-            },
-            priority="high",
-            metadata={"demo": True, "category": "business_intelligence"}
+                "identify_trends": True,
+                "demo": True,
+                "category": "business_intelligence"
+            }
         )
         
-        result = await self.orchestrator.delegate_task(task)
-        self.demo_results["business_intelligence"] = result
+        task_id = await self.orchestrator.submit_task(
+            task_type=task.task_type,
+            data=task.data,
+            priority=task.priority,
+            requester_id="demo_system"
+        )
+        
+        # For demo purposes, wait a bit and get task status
+        await asyncio.sleep(2)
+        result = await self.orchestrator.get_task_status(task_id)
+        self.demo_results["business_intelligence"] = {"task_id": task_id, "status": result}
         
         logger.info("✅ Business intelligence demonstration completed")
         return result
@@ -178,6 +199,7 @@ class AgentDemonstrator:
         task = AgentTask(
             task_id="demo_qa_001",
             task_type="quality_validation",
+            priority=TaskPriority.HIGH,
             data={
                 "validation_type": "content",
                 "target": {
@@ -186,14 +208,23 @@ class AgentDemonstrator:
                     "requirements": ["accuracy", "completeness", "readability"]
                 },
                 "standards": ["ISO_9001", "CUSTOM_QUALITY"],
-                "generate_report": True
-            },
-            priority="high",
-            metadata={"demo": True, "category": "quality_assurance"}
+                "generate_report": True,
+                "demo": True,
+                "category": "quality_assurance"
+            }
         )
         
-        result = await self.orchestrator.delegate_task(task)
-        self.demo_results["quality_assurance"] = result
+        task_id = await self.orchestrator.submit_task(
+            task_type=task.task_type,
+            data=task.data,
+            priority=task.priority,
+            requester_id="demo_system"
+        )
+        
+        # For demo purposes, wait a bit and get task status
+        await asyncio.sleep(2)
+        result = await self.orchestrator.get_task_status(task_id)
+        self.demo_results["quality_assurance"] = {"task_id": task_id, "status": result}
         
         logger.info("✅ Quality assurance demonstration completed")
         return result
@@ -209,12 +240,12 @@ class AgentDemonstrator:
         doc_task = AgentTask(
             task_id="coord_doc_001",
             task_type="document_analysis",
+            priority=TaskPriority.MEDIUM,
             data={
                 "document_content": "Quarterly business report with financial data and performance metrics.",
-                "analysis_type": "comprehensive"
-            },
-            priority="medium",
-            metadata={"coordination_demo": True}
+                "analysis_type": "comprehensive",
+                "coordination_demo": True
+            }
         )
         tasks.append(doc_task)
         
@@ -222,13 +253,12 @@ class AgentDemonstrator:
         bi_task = AgentTask(
             task_id="coord_bi_001", 
             task_type="business_analysis",
+            priority=TaskPriority.MEDIUM,
             data={
                 "analysis_type": "trend_analysis",
-                "context": "Based on quarterly report analysis"
-            },
-            priority="medium",
-            dependencies=["coord_doc_001"],
-            metadata={"coordination_demo": True}
+                "context": "Based on quarterly report analysis",
+                "coordination_demo": True
+            }
         )
         tasks.append(bi_task)
         
@@ -236,22 +266,30 @@ class AgentDemonstrator:
         qa_task = AgentTask(
             task_id="coord_qa_001",
             task_type="quality_validation",
+            priority=TaskPriority.HIGH,
             data={
                 "validation_type": "output",
                 "target": "Analysis results validation",
-                "dependencies_context": ["coord_doc_001", "coord_bi_001"]
-            },
-            priority="high",
-            dependencies=["coord_doc_001", "coord_bi_001"],
-            metadata={"coordination_demo": True}
+                "dependencies_context": ["coord_doc_001", "coord_bi_001"],
+                "coordination_demo": True
+            }
         )
         tasks.append(qa_task)
         
         # Execute tasks with coordination
         coordination_results = []
         for task in tasks:
-            result = await self.orchestrator.delegate_task(task)
-            coordination_results.append(result)
+            task_id = await self.orchestrator.submit_task(
+                task_type=task.task_type,
+                data=task.data,
+                priority=task.priority,
+                requester_id="demo_coordination"
+            )
+            
+            # Wait a bit for task to be processed
+            await asyncio.sleep(1)
+            result = await self.orchestrator.get_task_status(task_id)
+            coordination_results.append({"task_id": task_id, "status": result})
             
         self.demo_results["multi_agent_coordination"] = coordination_results
         
@@ -284,7 +322,7 @@ class AgentDemonstrator:
             "orchestrator_metrics": {
                 "total_tasks_processed": self.orchestrator.total_tasks,
                 "active_agents": len(self.orchestrator.agents),
-                "queue_status": len(self.orchestrator.task_queue.queue) if hasattr(self.orchestrator.task_queue, 'queue') else 0
+                "queue_status": self.orchestrator.task_queue.size()
             },
             "demonstration_results": self.demo_results,
             "technical_highlights": [

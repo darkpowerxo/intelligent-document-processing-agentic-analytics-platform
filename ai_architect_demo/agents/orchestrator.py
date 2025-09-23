@@ -522,3 +522,27 @@ class AgentOrchestrator:
         self.agent_types.clear()
         
         logger.info("Orchestrator cleanup complete")
+    
+    async def shutdown(self):
+        """Gracefully shutdown the orchestrator."""
+        logger.info("Shutting down orchestrator...")
+        
+        # Stop task processing
+        self._running = False
+        
+        # Wait for current tasks to complete (with timeout)
+        try:
+            await asyncio.wait_for(self._wait_for_tasks_completion(), timeout=10.0)
+        except asyncio.TimeoutError:
+            logger.warning("Timeout waiting for tasks to complete")
+        
+        # Clean up resources
+        await self.cleanup()
+        
+        logger.info("Orchestrator shutdown complete")
+    
+    async def _wait_for_tasks_completion(self):
+        """Wait for all current tasks to complete."""
+        while (self.task_queue.size() > 0 and 
+               any(agent.status.value == "working" for agent in self.agents.values() if hasattr(agent, 'status'))):
+            await asyncio.sleep(0.1)

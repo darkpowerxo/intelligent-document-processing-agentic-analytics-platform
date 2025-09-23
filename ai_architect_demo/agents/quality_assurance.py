@@ -100,7 +100,9 @@ class QualityAssuranceAgent(BaseAgent):
         
         # Quality standards registry
         self.quality_standards: Dict[str, QualityStandard] = {}
-        self._initialize_default_standards()
+        # Initialize validation engines (will be called async later)
+        self.quality_thresholds = {}
+        self._standards_initialized = False
         
         # Test frameworks and validation engines
         self.validation_engines = {
@@ -166,6 +168,11 @@ class QualityAssuranceAgent(BaseAgent):
             Quality validation results
         """
         log_function_call("process_task", agent_id=self.agent_id, task_type=task.task_type)
+        
+        # Ensure standards are initialized
+        if not self._standards_initialized:
+            await self._initialize_default_standards()
+            self._standards_initialized = True
         
         task_handlers = {
             "quality_validation": self._perform_quality_validation,
