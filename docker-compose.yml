@@ -97,6 +97,14 @@ services:
       - ./docker/ollama/init.sh:/init.sh:ro
     environment:
       - OLLAMA_HOST=0.0.0.0
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
@@ -203,6 +211,14 @@ services:
     volumes:
       - ./notebooks:/home/jovyan/work
       - jupyter_data:/home/jovyan
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     networks:
       - ai_demo_network
 
@@ -224,6 +240,14 @@ services:
     volumes:
       - ./ai_architect_demo:/app/ai_architect_demo:ro
       - ./uploads:/app/uploads
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     depends_on:
       postgres:
         condition: service_healthy
@@ -276,6 +300,15 @@ services:
     volumes:
       - ./ai_architect_demo:/app/ai_architect_demo:ro
       - ./uploads:/app/uploads
+    runtime: nvidia
+    deploy:
+      replicas: 2
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     depends_on:
       postgres:
         condition: service_healthy
@@ -283,8 +316,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-    deploy:
-      replicas: 2
     networks:
       - ai_demo_network
 
