@@ -1,0 +1,157 @@
+[project]
+name = "ai-architect-demo"
+version = "0.1.0"
+description = "Enterprise AI Architecture Demo - Local Document Processing & Agentic Analytics Platform"
+authors = [
+    { name = "AI Architect Demo", email = "demo@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # Core Framework
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "streamlit>=1.28.0",
+    
+    # MLOps & Machine Learning
+    "mlflow>=2.8.0",
+    "scikit-learn>=1.3.0",
+    "pandas>=2.1.0",
+    "numpy>=1.25.0",
+    "polars>=0.19.0",
+    
+    # AI/ML Models & NLP
+    "transformers>=4.35.0",
+    "torch>=2.1.0",
+    "sentence-transformers>=2.2.0",
+    "spacy>=3.7.0",
+    "nltk>=3.8.0",
+    
+    # Document Processing
+    "pypdf2>=3.0.0",
+    "python-docx>=0.8.11",
+    "pytesseract>=0.3.10",
+    "pillow>=10.0.0",
+    
+    # Data Storage & Databases  
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "redis>=5.0.0",
+    "duckdb>=0.9.0",
+    "minio>=7.2.0",
+    
+    # Streaming & Message Queues
+    "kafka-python>=2.0.2",
+    "celery>=5.3.0",
+    
+    # Monitoring & Observability
+    "prometheus-client>=0.18.0",
+    "structlog>=23.2.0",
+    
+    # Utilities
+    "pydantic>=2.4.0",
+    "python-multipart>=0.0.6",
+    "python-dotenv>=1.0.0",
+    "typer>=0.9.0",
+    "rich>=13.6.0",
+    "httpx>=0.25.0",
+    "websockets>=12.0",
+    
+    # Vector Database & Embeddings
+    "chromadb>=0.4.0",
+    "faiss-cpu>=1.7.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.9.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.6.0",
+    "pre-commit>=3.5.0",
+]
+
+jupyter = [
+    "jupyter>=1.0.0",
+    "jupyterlab>=4.0.0",
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+    "plotly>=5.17.0",
+]
+
+spark = [
+    "pyspark>=3.5.0",
+]
+
+[project.scripts]
+ai-demo = "ai_architect_demo.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0", 
+    "pytest-cov>=4.1.0",
+    "black>=23.9.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.6.0",
+    "pre-commit>=3.5.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
