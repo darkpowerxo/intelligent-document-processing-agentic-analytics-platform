@@ -32,6 +32,19 @@ class ValidationSeverity(Enum):
     CRITICAL = "critical"
 
 
+class ValidationRule(BaseModel):
+    """Validation rule definition."""
+    name: str
+    field: str
+    validator: str
+    parameters: Dict[str, Any] = {}
+    severity: ValidationSeverity = ValidationSeverity.ERROR
+    message: Optional[str] = None
+    
+    class Config:
+        use_enum_values = True
+
+
 class ValidationResult(BaseModel):
     """Validation result model."""
     field: str

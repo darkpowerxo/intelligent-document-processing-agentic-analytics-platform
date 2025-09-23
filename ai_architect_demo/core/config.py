@@ -8,7 +8,8 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from pydantic import BaseSettings, validator
+from pydantic_settings import BaseSettings
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -50,13 +51,12 @@ class Settings(BaseSettings):
     ollama_timeout: int = 120
     
     # Kafka Settings
-    kafka_bootstrap_servers: List[str] = ["localhost:9092"]
+    kafka_bootstrap_servers: str = "localhost:9092"
     kafka_consumer_group: str = "ai_demo_group"
-    kafka_topics: dict = {
-        "document_upload": "document-upload",
-        "processing_results": "processing-results",
-        "agent_communications": "agent-comms"
-    }
+    # Topics as individual fields to avoid dict parsing issues
+    kafka_topic_document_upload: str = "document-upload"
+    kafka_topic_processing_results: str = "processing-results"
+    kafka_topic_agent_comms: str = "agent-comms"
     
     # MinIO Settings
     minio_endpoint: str = "localhost:9000"
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     
     # File Processing Settings
     max_file_size: int = 50 * 1024 * 1024  # 50MB
-    allowed_file_types: List[str] = [".pdf", ".docx", ".txt", ".md", ".csv"]
+    allowed_file_types: str = ".pdf,.docx,.txt,.md,.csv"  # Comma-separated string
     upload_dir: Path = Path("./uploads")
     
     # Model Settings
@@ -90,13 +90,15 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
-    @validator("upload_dir")
+    @field_validator("upload_dir")
+    @classmethod
     def create_upload_dir(cls, v):
         """Create upload directory if it doesn't exist."""
         v.mkdir(parents=True, exist_ok=True)
         return v
     
-    @validator("log_level")
+    @field_validator("log_level")
+    @classmethod
     def validate_log_level(cls, v):
         """Validate log level."""
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -124,10 +126,30 @@ class Settings(BaseSettings):
         """Construct Ollama base URL."""
         return f"http://{self.ollama_host}:{self.ollama_port}"
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    @property
+    def kafka_servers(self) -> List[str]:
+        """Get Kafka bootstrap servers as a list."""
+        return [server.strip() for server in self.kafka_bootstrap_servers.split(",")]
+    
+    @property
+    def file_types_list(self) -> List[str]:
+        """Get allowed file types as a list."""
+        return [ext.strip() for ext in self.allowed_file_types.split(",")]
+    
+    @property
+    def kafka_topics_dict(self) -> dict:
+        """Get Kafka topics as a dictionary."""
+        return {
+            "document_upload": self.kafka_topic_document_upload,
+            "processing_results": self.kafka_topic_processing_results,
+            "agent_communications": self.kafka_topic_agent_comms
+        }
+    
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False
+    }
 
 
 # Global settings instance
