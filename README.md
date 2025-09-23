@@ -205,11 +205,14 @@ This local demo demonstrates patterns that scale to production:
 
 ## 📚 Documentation
 
-- [Architecture Decision Records](docs/adr/) - Key design decisions
-- [API Documentation](docs/api/) - Complete API reference  
-- [Deployment Guide](docs/deployment/) - Production deployment
-- [Performance Benchmarks](docs/performance/) - System performance analysis
-- [Security Guide](docs/security/) - Security implementation details
+- [Architecture Decision Records](docs/adr/) - Key design decisions and architectural choices
+- [API Documentation](docs/api/) - Complete API reference and integration guides
+- [Deployment Guide](docs/deployment/) - Production deployment and operations
+- [Performance Benchmarks](docs/performance/) - System performance analysis and optimization
+- [Security Guide](docs/security/) - Security implementation details and compliance
+- [Architecture Overview](ARCHITECTURE.md) - Complete system architecture documentation
+- [API Reference](docs/api/complete-reference.md) - Comprehensive API documentation
+- [Production Deployment](docs/deployment/production-guide.md) - Detailed production setup guide
 
 ## 🤝 Contributing
 

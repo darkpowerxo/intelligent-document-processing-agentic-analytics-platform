@@ -16,6 +16,7 @@ RUN pip install uv
 
 # Copy project files
 COPY pyproject.toml .
+COPY README.md .
 COPY ai_architect_demo ./ai_architect_demo/
 
 # Create virtual environment and install dependencies
