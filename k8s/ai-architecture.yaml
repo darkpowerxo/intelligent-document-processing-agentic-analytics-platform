@@ -1,0 +1,348 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-architecture
+  labels:
+    name: ai-architecture
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-config
+  namespace: ai-architecture
+data:
+  production.yaml: |
+    api:
+      debug: false
+      log_level: INFO
+      cors_origins: ["https://your-domain.com"]
+      max_upload_size: 100MB
+      
+    database:
+      pool_size: 20
+      max_overflow: 30
+      echo: false
+      
+    agents:
+      max_concurrent_tasks: 10
+      task_timeout: 300
+      retry_attempts: 3
+      
+    streaming:
+      batch_size: 100
+      flush_interval: 5
+      
+    security:
+      jwt_expire_minutes: 60
+      bcrypt_rounds: 12
+      rate_limit: "100/minute"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-secrets
+  namespace: ai-architecture
+type: Opaque
+stringData:
+  database-url: "postgresql://aiuser:aipassword@postgres:5432/aiarch"
+  redis-url: "redis://redis:6379/0"
+  kafka-brokers: "kafka:9092"
+  secret-key: "your-super-secure-secret-key-change-in-production"
+  minio-access-key: "minioadmin"
+  minio-secret-key: "minioadmin"
+  postgres-user: "aiuser"
+  postgres-password: "aipassword"
+  postgres-db: "aiarch"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-api
+  namespace: ai-architecture
+  labels:
+    app: ai-api
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ai-api
+  template:
+    metadata:
+      labels:
+        app: ai-api
+    spec:
+      containers:
+      - name: ai-api
+        image: ai-architect-demo:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: redis-url
+        - name: KAFKA_BROKERS
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: kafka-brokers
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: secret-key
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: ENVIRONMENT
+          value: "production"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config/production.yaml
+          subPath: production.yaml
+        - name: uploads
+          mountPath: /app/uploads
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: ai-config
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: uploads-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-api
+  namespace: ai-architecture
+spec:
+  selector:
+    app: ai-api
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-agents
+  namespace: ai-architecture
+  labels:
+    app: ai-agents
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: ai-agents
+  template:
+    metadata:
+      labels:
+        app: ai-agents
+    spec:
+      containers:
+      - name: ai-agents
+        image: ai-architect-demo:latest
+        imagePullPolicy: Always
+        command: ["python", "-m", "ai_architect_demo.agents.worker"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: redis-url
+        - name: KAFKA_BROKERS
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: kafka-brokers
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: secret-key
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: ENVIRONMENT
+          value: "production"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config/production.yaml
+          subPath: production.yaml
+        - name: uploads
+          mountPath: /app/uploads
+        - name: models
+          mountPath: /app/models
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+      volumes:
+      - name: config
+        configMap:
+          name: ai-config
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: uploads-pvc
+      - name: models
+        persistentVolumeClaim:
+          claimName: models-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-streaming
+  namespace: ai-architecture
+  labels:
+    app: ai-streaming
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-streaming
+  template:
+    metadata:
+      labels:
+        app: ai-streaming
+    spec:
+      containers:
+      - name: ai-streaming
+        image: ai-architect-demo:latest
+        imagePullPolicy: Always
+        command: ["python", "-m", "ai_architect_demo.streaming.processor"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: redis-url
+        - name: KAFKA_BROKERS
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: kafka-brokers
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-secrets
+              key: secret-key
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: ENVIRONMENT
+          value: "production"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config/production.yaml
+          subPath: production.yaml
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+      volumes:
+      - name: config
+        configMap:
+          name: ai-config
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: ai-architecture
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: nfs-client
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+  namespace: ai-architecture
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: nfs-client
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-api-ingress
+  namespace: ai-architecture
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  tls:
+  - hosts:
+    - your-domain.com
+    secretName: ai-tls-secret
+  rules:
+  - host: your-domain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-api
+            port:
+              number: 8000
