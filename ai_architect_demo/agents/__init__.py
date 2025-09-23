@@ -1,25 +1,49 @@
-"""Agentic AI system for AI Architect Demo.
+"""Multi-agent AI system for enterprise-grade document processing and business intelligence.
 
-This package provides a multi-agent orchestration system with:
-- Specialized AI agents for different tasks
-- Agent coordination and communication
-- Local LLM integration
-- Task delegation and result aggregation
+This package provides a comprehensive agent orchestration system with specialized
+agents for different types of AI tasks, coordinated through a central orchestrator.
 """
 
-from .orchestrator import AgentOrchestrator, agent_orchestrator
-from .base_agent import BaseAgent, AgentRole, AgentStatus
-from .document_analyzer import DocumentAnalyzerAgent
-from .business_intelligence import BusinessIntelligenceAgent
-from .quality_assurance import QualityAssuranceAgent
+from ai_architect_demo.agents.orchestrator import AgentOrchestrator, TaskQueue
+from ai_architect_demo.agents.base_agent import (
+    BaseAgent,
+    AgentRole,
+    AgentStatus,
+    TaskPriority,
+    AgentTask,
+    AgentMessage,
+    AgentCapabilities
+)
+from ai_architect_demo.agents.document_analyzer import DocumentAnalyzerAgent
+from ai_architect_demo.agents.business_intelligence import BusinessIntelligenceAgent
+from ai_architect_demo.agents.quality_assurance import (
+    QualityAssuranceAgent,
+    QualityLevel,
+    QualityMetric,
+    QualityStandard
+)
 
 __all__ = [
+    # Core orchestration
     "AgentOrchestrator",
-    "agent_orchestrator", 
+    "TaskQueue",
+    
+    # Base classes and enums
     "BaseAgent",
     "AgentRole",
-    "AgentStatus",
+    "AgentStatus", 
+    "TaskPriority",
+    "AgentTask",
+    "AgentMessage",
+    "AgentCapabilities",
+    
+    # Specialized agents
     "DocumentAnalyzerAgent",
     "BusinessIntelligenceAgent", 
-    "QualityAssuranceAgent"
+    "QualityAssuranceAgent",
+    
+    # Quality assurance classes
+    "QualityLevel",
+    "QualityMetric", 
+    "QualityStandard"
 ]
