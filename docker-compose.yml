@@ -126,7 +126,7 @@ services:
 
   # Kafka for message streaming
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:6.2.0
     container_name: ai_demo_kafka
     depends_on:
       - zookeeper
