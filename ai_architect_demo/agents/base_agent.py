@@ -403,7 +403,7 @@ class BaseAgent(ABC):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1
     ) -> Dict[str, Any]:
-        """Query LLM for structured JSON response.
+        """Query LLM for structured JSON response with fallback support.
         
         Args:
             prompt: User prompt
@@ -412,8 +412,14 @@ class BaseAgent(ABC):
             temperature: Sampling temperature
             
         Returns:
-            Parsed JSON response
+            Parsed JSON response or fallback structure
         """
+        # Check LLM availability first
+        llm_available = await self._check_llm_availability()
+        if not llm_available:
+            logger.warning(f"LLM unavailable for structured query, using fallback structure")
+            return self._get_fallback_structured_response(prompt, response_format, system_prompt)
+        
         # Create a prompt that requests JSON format
         json_prompt = f"""
 {prompt}
@@ -427,7 +433,7 @@ Respond only with the JSON, no additional text.
         # Add JSON format instruction to system prompt
         json_system_prompt = (system_prompt or "") + "\n\nAlways respond with valid JSON format."
         
-        response = await self.query_llm(json_prompt, json_system_prompt, temperature)
+        response = await self.query_llm(json_prompt, json_system_prompt, temperature, enable_fallback=False)
         
         try:
             # Try to parse JSON response
@@ -444,7 +450,70 @@ Respond only with the JSON, no additional text.
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse LLM JSON response: {e}")
             logger.error(f"Raw response: {response}")
-            raise ValueError(f"LLM did not return valid JSON: {e}")
+            
+            # Return fallback structured response instead of raising error
+            logger.info("Using fallback structured response due to JSON parsing error")
+            return self._get_fallback_structured_response(prompt, response_format, system_prompt)
+    
+    def _get_fallback_structured_response(
+        self, 
+        prompt: str, 
+        response_format: Dict[str, Any], 
+        system_prompt: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Generate a fallback structured response when LLM is unavailable or returns invalid JSON.
+        
+        Args:
+            prompt: Original user prompt
+            response_format: Expected JSON schema
+            system_prompt: System prompt for context
+            
+        Returns:
+            Structured response matching the expected format
+        """
+        # Create a basic structure based on the expected format
+        fallback_response = {}
+        
+        for key, value in response_format.items():
+            if isinstance(value, str):
+                # String fields - provide offline mode indicators
+                if "summary" in key.lower():
+                    fallback_response[key] = "Summary not available (offline mode)"
+                elif "description" in key.lower():
+                    fallback_response[key] = "Description requires LLM connection"
+                elif "analysis" in key.lower():
+                    fallback_response[key] = "Analysis pending LLM service"
+                elif "insight" in key.lower():
+                    fallback_response[key] = "AI insights require model access"
+                else:
+                    fallback_response[key] = f"Offline mode - {key} unavailable"
+            
+            elif isinstance(value, (int, float)):
+                # Numeric fields - provide neutral values
+                fallback_response[key] = 0
+            
+            elif isinstance(value, bool):
+                # Boolean fields - default to False for safety
+                fallback_response[key] = False
+            
+            elif isinstance(value, list):
+                # List fields - provide empty list with note
+                fallback_response[key] = []
+            
+            elif isinstance(value, dict):
+                # Nested objects - recursively handle
+                fallback_response[key] = self._get_fallback_structured_response("", value, system_prompt)
+            
+            else:
+                # Default fallback
+                fallback_response[key] = None
+        
+        # Add a general offline mode indicator if not present
+        if "status" not in fallback_response and "mode" not in fallback_response:
+            fallback_response["_offline_mode"] = True
+            fallback_response["_note"] = "Response generated in offline mode - LLM service unavailable"
+        
+        return fallback_response
     
     def get_status(self) -> Dict[str, Any]:
         """Get current agent status and metrics.
@@ -482,7 +551,7 @@ Respond only with the JSON, no additional text.
             # Cancel any pending tasks
             for task_id in list(self.current_tasks.keys()):
                 task = self.current_tasks.get(task_id)
-                if task and not task.done():
+                if task and hasattr(task, 'cancel') and not task.done():
                     task.cancel()
                     try:
                         await task
