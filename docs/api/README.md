@@ -17,10 +17,10 @@ This directory contains the complete API reference documentation for the AI Arch
 
 ## Quick Links
 
-- **Base URL**: `http://localhost:8000` (development)
-- **Interactive Docs**: http://localhost:8000/docs (Swagger UI)
-- **Alternative Docs**: http://localhost:8000/redoc (ReDoc)
-- **OpenAPI Spec**: http://localhost:8000/openapi.json
+- **Base URL**: `http://localhost:8002` (development)
+- **Interactive Docs**: http://localhost:8002/docs (Swagger UI)
+- **Alternative Docs**: http://localhost:8002/redoc (ReDoc)
+- **OpenAPI Spec**: http://localhost:8002/openapi.json
 
 ## Getting Started
 

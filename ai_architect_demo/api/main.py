@@ -159,8 +159,7 @@ async def startup_event():
         create_document_validation_rules(data_validator)
         logger.info("Document validation rules configured")
         
-        # Initialize MLOps manager
-        await ml_manager.initialize()
+        # MLOps manager is already initialized in its constructor
         logger.info("MLOps manager initialized")
         
     except Exception as e:

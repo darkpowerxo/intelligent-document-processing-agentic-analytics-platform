@@ -17,7 +17,7 @@ This document provides comprehensive documentation for the AI Architecture API, 
 
 ## Base Information
 
-- **Base URL**: `http://localhost:8000` (development) / `https://api.your-domain.com` (production)
+- **Base URL**: `http://localhost:8002` (development) / `https://api.your-domain.com` (production)
 - **API Version**: v1
 - **Content Type**: `application/json`
 - **Documentation**: Available at `/docs` (Swagger UI) and `/redoc` (ReDoc)
@@ -651,7 +651,7 @@ from ai_architecture_sdk import AIArchitectureClient, Document
 
 # Initialize client
 client = AIArchitectureClient(
-    base_url="http://localhost:8000",
+    base_url="http://localhost:8002",
     api_key="your-api-key"
 )
 
@@ -692,7 +692,7 @@ asyncio.run(process_document())
 import { AIArchitectureClient } from '@ai-architecture/sdk';
 
 const client = new AIArchitectureClient({
-  baseURL: 'http://localhost:8000',
+  baseURL: 'http://localhost:8002',
   apiKey: 'your-api-key'
 });
 
@@ -739,7 +739,7 @@ async function processDocument() {
 
 #### Upload Document
 ```bash
-curl -X POST "http://localhost:8000/api/v1/documents/upload" \
+curl -X POST "http://localhost:8002/api/v1/documents/upload" \
   -H "Authorization: Bearer your-jwt-token" \
   -F "file=@contract.pdf" \
   -F "metadata={\"category\":\"contract\",\"priority\":\"high\"}"
@@ -747,14 +747,14 @@ curl -X POST "http://localhost:8000/api/v1/documents/upload" \
 
 #### Get Document Analysis
 ```bash
-curl -X GET "http://localhost:8000/api/v1/documents/doc_123456789/analysis" \
+curl -X GET "http://localhost:8002/api/v1/documents/doc_123456789/analysis" \
   -H "Authorization: Bearer your-jwt-token" \
   -H "Accept: application/json"
 ```
 
 #### Stream Events
 ```bash
-curl -X GET "http://localhost:8000/api/v1/events/stream?event_types=document_processed" \
+curl -X GET "http://localhost:8002/api/v1/events/stream?event_types=document_processed" \
   -H "Authorization: Bearer your-jwt-token" \
   -H "Accept: text/event-stream"
 ```
@@ -764,7 +764,7 @@ curl -X GET "http://localhost:8000/api/v1/events/stream?event_types=document_pro
 For real-time bidirectional communication, the API also supports WebSocket connections:
 
 ```javascript
-const ws = new WebSocket('ws://localhost:8000/ws/events');
+const ws = new WebSocket('ws://localhost:8002/ws/events');
 
 ws.onopen = function() {
   // Subscribe to events

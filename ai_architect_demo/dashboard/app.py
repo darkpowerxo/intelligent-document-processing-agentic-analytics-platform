@@ -166,7 +166,7 @@ def show_overview(api: DashboardAPI):
             title="Daily Document Processing Volume",
             labels={"x": "Date", "y": "Documents"}
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
         st.subheader("🎯 Agent Performance")
@@ -180,7 +180,7 @@ def show_overview(api: DashboardAPI):
             color=performance,
             color_continuous_scale="Viridis"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     # Recent activity
     st.subheader("🕒 Recent Activity")
@@ -202,7 +202,7 @@ def show_overview(api: DashboardAPI):
     }
     
     df = pd.DataFrame(activity_data)
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width='stretch')
 
 def show_agent_analytics(api: DashboardAPI):
     """Show agent analytics dashboard"""
@@ -249,7 +249,7 @@ def show_agent_analytics(api: DashboardAPI):
         yaxis_title="Tasks Processed"
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 def show_streaming_monitor(api: DashboardAPI):
     """Show streaming system monitor"""
@@ -280,7 +280,7 @@ def show_streaming_monitor(api: DashboardAPI):
         "Status": ["🟢 Healthy", "🟢 Healthy", "🟢 Healthy", "🟢 Healthy", "🟢 Healthy"]
     }
     
-    st.dataframe(pd.DataFrame(topics_data), use_container_width=True)
+    st.dataframe(pd.DataFrame(topics_data), width='stretch')
 
 def show_system_metrics(api: DashboardAPI):
     """Show system metrics dashboard"""
@@ -318,7 +318,7 @@ def show_system_metrics(api: DashboardAPI):
         yaxis_title="Usage %"
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 def show_document_processing(api: DashboardAPI):
     """Show document processing interface"""
@@ -350,7 +350,7 @@ def show_document_processing(api: DashboardAPI):
         "ETA": ["2 min", "5 min", "7 min"]
     }
     
-    st.dataframe(pd.DataFrame(queue_data), use_container_width=True)
+    st.dataframe(pd.DataFrame(queue_data), width='stretch')
     
     # Results
     st.subheader("✅ Recent Results")
@@ -363,7 +363,7 @@ def show_document_processing(api: DashboardAPI):
         "Action": ["📊 View", "📊 View", "📊 View"]
     }
     
-    st.dataframe(pd.DataFrame(results_data), use_container_width=True)
+    st.dataframe(pd.DataFrame(results_data), width='stretch')
 
 if __name__ == "__main__":
     main()
