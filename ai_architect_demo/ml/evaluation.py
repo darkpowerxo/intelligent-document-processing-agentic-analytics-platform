@@ -26,6 +26,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import cross_val_score, StratifiedKFold, KFold
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pydantic import BaseModel
 
 from ai_architect_demo.core.config import settings
 from ai_architect_demo.core.logging import get_logger, log_function_call

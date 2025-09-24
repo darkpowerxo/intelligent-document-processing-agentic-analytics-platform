@@ -1,28 +1,58 @@
 # FastAPI Application Dockerfile
+# Multi-stage build for optimization
 
-FROM python:3.11-slim
+# Build stage - install dependencies
+FROM python:3.11-slim AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (combine into single layer)
 RUN apt-get update && apt-get install -y \
     curl \
     netcat-openbsd \
-    && rm -rf /var/lib/apt/lists/*
+    build-essential \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Install uv package manager
-RUN pip install uv
+# Install uv package manager with specific version for reproducibility
+RUN pip install --no-cache-dir uv==0.1.45
 
-# Copy project files
-COPY pyproject.toml .
-COPY README.md .
+# Copy only dependency files first (for better caching)
+COPY pyproject.toml ./
+COPY README.md ./
+
+# Copy source code needed for editable install
 COPY ai_architect_demo ./ai_architect_demo/
 
 # Create virtual environment and install dependencies
+# This layer will be cached unless pyproject.toml changes
 RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-RUN uv pip install -e .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    VIRTUAL_ENV=/opt/venv uv pip install -e .
+
+# Production stage - minimal runtime image
+FROM python:3.11-slim AS production
+
+# Set working directory
+WORKDIR /app
+
+# Install only runtime system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy project files (this happens last to maximize cache hits)
+COPY pyproject.toml ./
+COPY README.md ./
+COPY ai_architect_demo ./ai_architect_demo/
 
 # Create uploads directory
 RUN mkdir -p /app/uploads

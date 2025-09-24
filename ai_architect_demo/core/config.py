@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_workers: int = 1
+    cors_origins: List[str] = ["*"]
     
     # Database Settings
     postgres_host: str = "localhost"
