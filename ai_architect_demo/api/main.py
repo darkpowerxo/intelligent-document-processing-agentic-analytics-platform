@@ -32,6 +32,7 @@ from ai_architect_demo.data.validation import data_validator, create_document_va
 from ai_architect_demo.ml.mlops import MLOpsManager, mlops_manager
 from ai_architect_demo.ml.evaluation import model_evaluator
 from ai_architect_demo.api.routes import documents_router, models_router
+from ai_architect_demo.api.routes.agents import router as agents_router
 
 logger = get_logger(__name__)
 
@@ -153,6 +154,7 @@ app.add_middleware(
 # Include routers
 app.include_router(documents_router)
 app.include_router(models_router)
+app.include_router(agents_router)
 
 # Global variables for services
 db: Optional[Database] = None
