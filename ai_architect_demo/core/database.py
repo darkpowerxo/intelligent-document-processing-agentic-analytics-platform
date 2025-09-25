@@ -84,7 +84,7 @@ async def disconnect_database() -> None:
 
 
 @asynccontextmanager
-async def get_database() -> AsyncGenerator[Database, None]:
+async def get_database_context() -> AsyncGenerator[Database, None]:
     """Get database connection context manager."""
     global database
     
@@ -96,6 +96,17 @@ async def get_database() -> AsyncGenerator[Database, None]:
         yield database
     finally:
         pass  # Keep connection open for reuse
+
+
+async def get_database() -> Database:
+    """Get database instance for FastAPI dependency injection."""
+    global database
+    
+    if database is None:
+        await init_database()
+        await connect_database()
+    
+    return database
 
 
 async def execute_query(
@@ -111,7 +122,7 @@ async def execute_query(
     Returns:
         List of result dictionaries
     """
-    async with get_database() as db:
+    async with get_database_context() as db:
         try:
             result = await db.fetch_all(query, values or {})
             return [dict(row) for row in result]
@@ -136,7 +147,7 @@ async def execute_single(
     Returns:
         Single result dictionary or None
     """
-    async with get_database() as db:
+    async with get_database_context() as db:
         try:
             result = await db.fetch_one(query, values or {})
             return dict(result) if result else None
@@ -161,7 +172,7 @@ async def execute_command(
     Returns:
         Number of affected rows
     """
-    async with get_database() as db:
+    async with get_database_context() as db:
         try:
             result = await db.execute(query, values or {})
             return result

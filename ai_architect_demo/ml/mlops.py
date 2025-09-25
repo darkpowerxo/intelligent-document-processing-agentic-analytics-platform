@@ -410,6 +410,38 @@ class MLOpsManager:
         except Exception as e:
             logger.error(f"Failed to get experiment runs: {e}")
             raise
+    
+    def list_registered_models(self) -> List[Dict[str, Any]]:
+        """List all registered models in MLflow.
+        
+        Returns:
+            List of model information dictionaries
+        """
+        try:
+            models = self.client.search_registered_models()
+            return [
+                {
+                    "name": model.name,
+                    "creation_timestamp": model.creation_timestamp,
+                    "last_updated_timestamp": model.last_updated_timestamp,
+                    "description": model.description,
+                    "latest_versions": [
+                        {
+                            "version": version.version,
+                            "stage": version.current_stage,
+                            "creation_timestamp": version.creation_timestamp,
+                            "last_updated_timestamp": version.last_updated_timestamp
+                        }
+                        for version in model.latest_versions
+                    ]
+                }
+                for model in models
+            ]
+            
+        except Exception as e:
+            logger.error(f"Failed to list registered models: {e}")
+            # Return empty list if MLflow is not accessible rather than failing
+            return []
 
 
 # Global MLOps manager instance

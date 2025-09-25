@@ -14,8 +14,10 @@ from typing import List, Optional, Dict, Any
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks, status, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
+from pydantic.json import pydantic_encoder
+import json
 
 from ai_architect_demo.core.database import Database, get_database
 from ai_architect_demo.core.logging import get_logger, log_function_call
@@ -31,15 +33,20 @@ router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 # Models
 class DocumentMetadata(BaseModel):
     """Document metadata model."""
-    id: str
+    id: int
     filename: str
     content_type: str
     file_size: int
     status: str
     upload_timestamp: datetime
     processed_at: Optional[datetime] = None
-    user_id: str
-    error_message: Optional[str] = None
+    user_id: int
+    metadata: Optional[dict] = None
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
 
 
 class DocumentUploadResponse(BaseModel):
@@ -51,6 +58,11 @@ class DocumentUploadResponse(BaseModel):
     upload_timestamp: datetime
     processing_url: str
     validation_report: Optional[ValidationReport] = None
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 
 class DocumentProcessingResults(BaseModel):
@@ -162,21 +174,26 @@ async def upload_document(
     # Store document in database
     try:
         query = """
-            INSERT INTO documents (id, filename, content_type, file_size, user_id, status, upload_timestamp, content)
-            VALUES (:id, :filename, :content_type, :file_size, :user_id, :status, :upload_timestamp, :content)
+            INSERT INTO app.documents (filename, original_name, file_path, file_size, content_type, processing_status, user_id, metadata)
+            VALUES (:filename, :original_name, :file_path, :file_size, :content_type, :processing_status, :user_id, :metadata)
+            RETURNING id
         """
-        await db.execute(query, {
-            "id": document_id,
+        result = await db.fetch_one(query, {
             "filename": file.filename,
-            "content_type": file.content_type,
+            "original_name": file.filename,
+            "file_path": f"/uploads/{document_id}_{file.filename}",  # Placeholder path
             "file_size": file_size,
-            "user_id": "demo-user",  # From auth context
-            "status": "uploaded",
-            "upload_timestamp": datetime.now(),
-            "content": content
+            "content_type": file.content_type,
+            "processing_status": "uploaded",
+            "user_id": 1,  # Demo user ID (assuming user with id=1 exists)
+            "metadata": json.dumps({"document_id": document_id, "content_preview": content[:100].decode('utf-8', errors='ignore') if content else ""})
         })
         
-        logger.info(f"Document stored in database: {document_id}")
+        # Get the auto-generated ID
+        if result:
+            db_document_id = result["id"]
+        
+        logger.info(f"Document stored in database with ID: {db_document_id}, UUID: {document_id}")
         
     except Exception as e:
         logger.error(f"Database error storing document: {e}")
@@ -195,7 +212,7 @@ async def upload_document(
         extract_metadata
     )
     
-    return DocumentUploadResponse(
+    response_data = DocumentUploadResponse(
         document_id=document_id,
         filename=file.filename,
         size=file_size,
@@ -203,6 +220,17 @@ async def upload_document(
         upload_timestamp=datetime.now(),
         processing_url=f"/api/v1/documents/{document_id}/status",
         validation_report=validation_report
+    )
+    
+    # Custom JSON serialization to handle datetime
+    def json_encoder(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+    
+    return JSONResponse(
+        content=json.loads(response_data.json()),
+        status_code=200
     )
 
 
@@ -222,9 +250,10 @@ async def get_document_status(
     """
     try:
         query = """
-            SELECT id, filename, status, upload_timestamp, processed_at, error_message, processing_results
-            FROM documents 
-            WHERE id = :document_id
+            SELECT id, filename, processing_status as status, upload_time as upload_timestamp, 
+                   processed_at, metadata
+            FROM app.documents 
+            WHERE metadata::jsonb->>'document_id' = :document_id
         """
         
         document = await db.fetch_one(query, {"document_id": document_id})
@@ -327,23 +356,35 @@ async def list_documents(
     try:
         # Build query with optional status filter
         base_query = """
-            SELECT id, filename, content_type, file_size, status, upload_timestamp, 
-                   processed_at, user_id, error_message
-            FROM documents 
+            SELECT id, filename, content_type, file_size, processing_status as status, upload_time as upload_timestamp, 
+                   processed_at, user_id, metadata
+            FROM app.documents 
             WHERE user_id = :user_id
         """
         
-        params = {"user_id": "demo-user", "limit": limit, "skip": skip}
+        params = {"user_id": 1, "limit": limit, "skip": skip}
         
         if status_filter:
-            base_query += " AND status = :status"
+            base_query += " AND processing_status = :status"
             params["status"] = status_filter
         
-        base_query += " ORDER BY upload_timestamp DESC LIMIT :limit OFFSET :skip"
+        base_query += " ORDER BY upload_time DESC LIMIT :limit OFFSET :skip"
         
         documents = await db.fetch_all(base_query, params)
         
-        return [DocumentMetadata(**dict(doc)) for doc in documents]
+        # Convert documents to proper format, parsing JSON metadata
+        document_list = []
+        for doc in documents:
+            doc_dict = dict(doc)
+            # Parse JSON metadata if it exists
+            if doc_dict.get('metadata'):
+                try:
+                    doc_dict['metadata'] = json.loads(doc_dict['metadata'])
+                except (json.JSONDecodeError, TypeError):
+                    doc_dict['metadata'] = {}
+            document_list.append(DocumentMetadata(**doc_dict))
+        
+        return document_list
         
     except Exception as e:
         logger.error(f"Error listing documents: {e}")

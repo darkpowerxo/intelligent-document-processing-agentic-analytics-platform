@@ -13,12 +13,14 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
+import json
 
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, BackgroundTasks, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 import uvicorn
 
@@ -98,13 +100,37 @@ class ErrorResponse(BaseModel):
     request_id: Optional[str] = None
 
 
-# Initialize FastAPI app
+# Custom JSON encoder for datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime objects."""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
+# Custom JSONResponse that uses our datetime encoder
+class CustomJSONResponse(JSONResponse):
+    """Custom JSON response with datetime serialization support."""
+    def render(self, content: Any) -> bytes:
+        return json.dumps(
+            jsonable_encoder(content),
+            cls=DateTimeEncoder,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+
+# Initialize FastAPI app with custom JSON encoder
 app = FastAPI(
     title="AI Architect Demo API",
     description="Enterprise AI Architecture Demo with document processing, ML models, and real-time analytics",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    default_response_class=CustomJSONResponse
 )
 
 # Security
@@ -237,166 +263,13 @@ async def health_check():
     )
 
 
-# Document processing endpoints
-@app.post("/api/v1/documents/upload", response_model=DocumentUploadResponse)
-async def upload_document(
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    user = Depends(get_current_user)
-):
-    """Upload and process a document."""
-    log_function_call("upload_document", filename=file.filename)
-    
-    # Generate document ID
-    document_id = str(uuid.uuid4())
-    
-    # Validate file
-    if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Filename is required"
-        )
-    
-    # Read file content
-    try:
-        content = await file.read()
-        file_size = len(content)
-        
-        if file_size > settings.max_file_size:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File size {file_size} exceeds maximum {settings.max_file_size}"
-            )
-        
-    except Exception as e:
-        logger.error(f"Error reading uploaded file: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Error reading file content"
-        )
-    
-    # Validate document metadata
-    doc_metadata = {
-        "filename": file.filename,
-        "content_type": file.content_type,
-        "file_size": file_size
-    }
-    
-    validation_result = data_validator.validate_data(doc_metadata)
-    if validation_result.failed > 0:
-        error_details = [r.message for r in validation_result.results]
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Document validation failed: {'; '.join(error_details)}"
-        )
-    
-    # Store document in database
-    try:
-        if db:
-            query = """
-                INSERT INTO documents (id, filename, content_type, file_size, user_id, status, upload_timestamp, content)
-                VALUES (:id, :filename, :content_type, :file_size, :user_id, :status, :upload_timestamp, :content)
-            """
-            await db.execute(query, {
-                "id": document_id,
-                "filename": file.filename,
-                "content_type": file.content_type,
-                "file_size": file_size,
-                "user_id": user["user_id"],
-                "status": "uploaded",
-                "upload_timestamp": datetime.now(),
-                "content": content
-            })
-    except Exception as e:
-        logger.error(f"Database error storing document: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error storing document"
-        )
-    
-    # Initialize processing status
-    processing_tasks[document_id] = {
-        "status": "queued",
-        "progress": 0,
-        "started_at": datetime.now(),
-        "current_step": "Document uploaded, queued for processing"
-    }
-    
-    # Start background processing
-    background_tasks.add_task(process_document_background, document_id, content, file.filename, file.content_type)
-    
-    return DocumentUploadResponse(
-        document_id=document_id,
-        filename=file.filename,
-        size=file_size,
-        status="uploaded",
-        upload_timestamp=datetime.now(),
-        processing_url=f"/api/v1/documents/{document_id}/status"
-    )
+# Document processing endpoints moved to routes/documents.py
 
 
-@app.get("/api/v1/documents/{document_id}/status", response_model=DocumentProcessingStatus)
-async def get_processing_status(
-    document_id: str,
-    user = Depends(get_current_user)
-):
-    """Get document processing status."""
-    if document_id not in processing_tasks:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
-        )
-    
-    task_info = processing_tasks[document_id]
-    
-    return DocumentProcessingStatus(
-        document_id=document_id,
-        status=task_info["status"],
-        progress=task_info["progress"],
-        current_step=task_info.get("current_step"),
-        error_message=task_info.get("error_message"),
-        started_at=task_info.get("started_at"),
-        completed_at=task_info.get("completed_at"),
-        results=task_info.get("results")
-    )
+# Document status endpoint moved to routes/documents.py
 
 
-@app.get("/api/v1/documents")
-async def list_documents(
-    user = Depends(get_current_user),
-    skip: int = 0,
-    limit: int = 100
-):
-    """List user's documents."""
-    if not db:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database not available"
-        )
-    
-    try:
-        query = """
-            SELECT id, filename, content_type, file_size, status, upload_timestamp, processing_results
-            FROM documents 
-            WHERE user_id = :user_id 
-            ORDER BY upload_timestamp DESC 
-            LIMIT :limit OFFSET :skip
-        """
-        
-        documents = await db.fetch_all(query, {
-            "user_id": user["user_id"],
-            "limit": limit,
-            "skip": skip
-        })
-        
-        return {"documents": [dict(doc) for doc in documents]}
-        
-    except Exception as e:
-        logger.error(f"Error listing documents: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error retrieving documents"
-        )
+# Document list endpoint moved to routes/documents.py
 
 
 # Model prediction endpoints
@@ -607,13 +480,14 @@ async def process_document_background(document_id: str, content: bytes, filename
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     """Handle HTTP exceptions."""
-    return JSONResponse(
+    error_response = ErrorResponse(
+        error=exc.detail,
+        detail=exc.detail,
+        timestamp=datetime.now()
+    )
+    return CustomJSONResponse(
         status_code=exc.status_code,
-        content=ErrorResponse(
-            error=exc.detail,
-            detail=exc.detail,
-            timestamp=datetime.now()
-        ).dict()
+        content=error_response.dict()
     )
 
 
@@ -621,13 +495,14 @@ async def http_exception_handler(request, exc):
 async def general_exception_handler(request, exc):
     """Handle general exceptions."""
     logger.error(f"Unhandled exception: {exc}")
-    return JSONResponse(
+    error_response = ErrorResponse(
+        error="Internal Server Error",
+        detail="An unexpected error occurred",
+        timestamp=datetime.now()
+    )
+    return CustomJSONResponse(
         status_code=500,
-        content=ErrorResponse(
-            error="Internal Server Error",
-            detail="An unexpected error occurred",
-            timestamp=datetime.now()
-        ).dict()
+        content=error_response.dict()
     )
 
 

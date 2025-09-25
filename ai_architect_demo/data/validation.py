@@ -212,6 +212,8 @@ class DataValidator:
         
         passed = max(0, total_checks - len(results))
         
+        success_rate = round(passed / total_checks * 100, 2) if total_checks > 0 else 0.0
+        
         return ValidationReport(
             total_checks=total_checks,
             passed=passed,
@@ -219,6 +221,7 @@ class DataValidator:
             warnings=len(warning_results),
             errors=len(error_results),
             critical=len(critical_results),
+            success_rate=success_rate,
             results=results
         )
     
