@@ -1,0 +1,60 @@
+# =============================================================================
+# Terraform.tfvars Template for AWS
+# Copy this file to terraform.tfvars and customize the values
+# =============================================================================
+
+# Project Configuration
+project_name = "ai-architect-demo"
+environment  = "dev"
+owner        = "ai-team"
+aws_region   = "us-east-1"
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+
+# Database Configuration
+db_name     = "ai_demo"
+db_username = "postgres"
+db_password = "YourSecurePassword123!"  # Change this!
+
+# RDS Configuration
+rds_instance_class       = "db.t3.micro"    # Use db.t3.small or larger for production
+rds_allocated_storage    = 20
+rds_max_allocated_storage = 100
+
+# Redis Configuration
+redis_node_type  = "cache.t3.micro"         # Use cache.r6g.large or larger for production
+redis_auth_token = "YourRedisToken123456!"  # Change this! Must be 16+ chars
+
+# Kafka Configuration
+kafka_instance_type = "kafka.t3.small"      # Use kafka.m5.large or larger for production
+kafka_volume_size   = 100
+
+# ECS Configuration
+api_task_cpu           = 512                 # 1024 = 1 vCPU
+api_task_memory        = 1024                # In MiB
+api_desired_count      = 2
+api_min_capacity       = 1
+api_max_capacity       = 10
+
+dashboard_task_cpu     = 256
+dashboard_task_memory  = 512
+dashboard_desired_count = 1
+
+# Monitoring
+log_retention_days = 7
+alert_email       = "your-email@example.com"  # Optional: for CloudWatch alerts
+
+# =============================================================================
+# Production Recommendations
+# =============================================================================
+
+# For production environments, consider:
+# - rds_instance_class = "db.r6g.large" or larger
+# - redis_node_type = "cache.r6g.large" or larger  
+# - kafka_instance_type = "kafka.m5.large" or larger
+# - api_task_cpu = 1024 (1 vCPU) or more
+# - api_task_memory = 2048 (2 GiB) or more
+# - log_retention_days = 30 or more
+# - Enable multi-AZ for RDS and Redis
+# - Use HTTPS/TLS certificates for ALB
