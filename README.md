@@ -224,7 +224,9 @@ This local demo demonstrates patterns that scale to production:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is proprietary software. Copyright (c) 2025 Sam Abtahi. All rights reserved.
+
+Permission is granted to view this code on GitHub and to submit contributions for consideration by the author. You may not copy, use, run, modify, distribute, sublicense, or otherwise exploit this software without the express written permission of the author. See the [LICENSE](LICENSE) file for full details.
 
 ## 🎯 Business Value
 
